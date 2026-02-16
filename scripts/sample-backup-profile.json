@@ -1,0 +1,32 @@
+{
+  "JobName": "Office + Family Drive Consolidation",
+  "SourceDrives": [
+    "D:\\",
+    "E:\\",
+    "F:\\",
+    "H:\\",
+    "I:\\"
+  ],
+  "OutputRoot": "J:\\DiamondOutput",
+  "EnablePhotoDatabaseMirror": true,
+  "PhotoDatabaseRoot": "Photo-Database",
+  "UseFastFileSizeDuplicateCheck": true,
+  "VerifyCopiedFiles": true,
+  "UseHashCheckForMismatchedTimestamp": true,
+  "PreserveWorkingDirectoryPattern": true,
+  "PreserveTimestamps": true,
+  "ContinueOnAccessDenied": true,
+  "DuplicateHandling": "SkipOnlyWhenContentMatches",
+  "DryRun": true,
+  "MaxParallelCopies": 12,
+  "Security": {
+    "AllowEncryptedDestination": true,
+    "BlockHiddenSystemFiles": false,
+    "QuarantineUntrustedExecutables": true,
+    "QuarantineFolderName": "Quarantine"
+  },
+  "IgnoreDirectories": [
+    "$Recycle.Bin",
+    "System Volume Information"
+  ]
+}
