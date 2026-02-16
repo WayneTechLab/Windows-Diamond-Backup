@@ -57,7 +57,7 @@ public sealed class BackupEngine
                 var info = new FileInfo(file);
                 if (ShouldSkip(profile, info)) return;
 
-                var relativeInDrive = Path.GetRelativePath(source, file);
+                var relativeInDrive = GetRelativePath(source, file);
                 var relativePath = profile.PreserveWorkingDirectoryPattern
                     ? Path.Combine(driveRootName, relativeInDrive)
                     : relativeInDrive;
@@ -143,9 +143,13 @@ public sealed class BackupEngine
     private static bool ShouldSkip(BackupProfile profile, FileInfo info)
     {
         var fullPath = info.FullName;
-        if (profile.IgnoreDirectories.Any(skip => fullPath.Contains(Path.DirectorySeparatorChar + skip + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)))
+        var separator = Path.DirectorySeparatorChar.ToString();
+        foreach (var skip in profile.IgnoreDirectories)
         {
-            return true;
+            if (fullPath.IndexOf(separator + skip + separator, StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return true;
+            }
         }
 
         if (profile.Security.BlockHiddenSystemFiles &&
@@ -168,6 +172,32 @@ public sealed class BackupEngine
 
         var name = new DirectoryInfo(source).Name;
         return string.IsNullOrWhiteSpace(name) ? "Drive" : name;
+    }
+
+    /// <summary>
+    /// .NET 4.8 compatible implementation of Path.GetRelativePath
+    /// </summary>
+    private static string GetRelativePath(string relativeTo, string path)
+    {
+#if NET5_0_OR_GREATER
+        return Path.GetRelativePath(relativeTo, path);
+#else
+        var relativeToUri = new Uri(EnsureTrailingSeparator(relativeTo));
+        var pathUri = new Uri(path);
+        var relativeUri = relativeToUri.MakeRelativeUri(pathUri);
+        var relativePath = Uri.UnescapeDataString(relativeUri.ToString());
+        return relativePath.Replace('/', Path.DirectorySeparatorChar);
+#endif
+    }
+
+    private static string EnsureTrailingSeparator(string path)
+    {
+        if (!path.EndsWith(Path.DirectorySeparatorChar.ToString()) &&
+            !path.EndsWith(Path.AltDirectorySeparatorChar.ToString()))
+        {
+            return path + Path.DirectorySeparatorChar;
+        }
+        return path;
     }
 
     private static ConcurrentDictionary<(long Size, string Name), List<string>> BuildDestinationDuplicateIndex(BackupProfile profile)

@@ -1,3 +1,4 @@
+﻿using System.IO;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Win32;
@@ -127,7 +128,7 @@ public partial class MainWindow : System.Windows.Window
         try
         {
             var profile = BuildProfileFromForm();
-            var dialog = new SaveFileDialog
+            var dialog = new Microsoft.Win32.SaveFileDialog
             {
                 Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*",
                 FileName = "backup-profile.json"
@@ -151,7 +152,7 @@ public partial class MainWindow : System.Windows.Window
     {
         try
         {
-            var dialog = new OpenFileDialog { Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*" };
+            var dialog = new Microsoft.Win32.OpenFileDialog { Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*" };
             if (dialog.ShowDialog() == true)
             {
                 var json = File.ReadAllText(dialog.FileName);

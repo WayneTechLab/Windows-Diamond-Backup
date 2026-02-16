@@ -1,4 +1,6 @@
-﻿using System.Text.Json;
+﻿using System.IO;
+using System.Text;
+using System.Text.Json;
 using WindowsDiamondFile.Core;
 
 Console.WriteLine("Windows Diamond File - Professional Multi-Drive Backup and Index Tool");
@@ -34,7 +36,7 @@ if (!File.Exists(profilePath))
         };
 
         var starterJson = JsonSerializer.Serialize(starter, new JsonSerializerOptions { WriteIndented = true });
-        await File.WriteAllTextAsync(profilePath, starterJson);
+        await WriteAllTextAsync(profilePath, starterJson);
         Console.WriteLine($"Created starter profile at {profilePath}. Edit values and run again.");
         return;
     }
@@ -48,7 +50,7 @@ if (!File.Exists(profilePath))
 
 try
 {
-    var profileJson = await File.ReadAllTextAsync(profilePath);
+    var profileJson = await ReadAllTextAsync(profilePath);
     var profile = JsonSerializer.Deserialize<BackupProfile>(profileJson) ?? throw new InvalidOperationException("Invalid profile.");
 
     var engine = new BackupEngine();
@@ -79,4 +81,24 @@ static bool LooksLikePlaceholder(string path)
 {
     var normalized = path.Replace('/', '\\').ToLowerInvariant();
     return normalized.Contains("path\\to\\") || normalized.Contains("your-backup-profile");
+}
+
+static async Task WriteAllTextAsync(string path, string contents)
+{
+#if NET5_0_OR_GREATER
+    await File.WriteAllTextAsync(path, contents);
+#else
+    using var writer = new StreamWriter(path, false, Encoding.UTF8);
+    await writer.WriteAsync(contents);
+#endif
+}
+
+static async Task<string> ReadAllTextAsync(string path)
+{
+#if NET5_0_OR_GREATER
+    return await File.ReadAllTextAsync(path);
+#else
+    using var reader = new StreamReader(path, Encoding.UTF8);
+    return await reader.ReadToEndAsync();
+#endif
 }
