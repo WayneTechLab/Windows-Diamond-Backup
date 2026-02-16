@@ -1,6 +1,6 @@
-# Build and Release Guide
+﻿# Build and Release Guide
 
-## 1) Build classic EXE (Windows 7/10/11)
+## 1) Build all apps (Core + CLI + GUI)
 
 Use Visual Studio 2022 Build Tools or newer on Windows:
 
@@ -8,23 +8,30 @@ Use Visual Studio 2022 Build Tools or newer on Windows:
 msbuild WindowsDiamondFile.sln /p:Configuration=Release
 ```
 
-Output binary:
+Key outputs:
 
 - `src\WindowsDiamondFile.Cli\bin\Release\net48\WindowsDiamondFile.exe`
+- `src\WindowsDiamondFile.Gui\bin\Release\net48\WindowsDiamondFile.Gui.exe`
 
-## 2) Build modern EXE / self-contained
+## 2) Publish modern self-contained binaries
+
+CLI:
 
 ```powershell
 dotnet publish src\WindowsDiamondFile.Cli\WindowsDiamondFile.Cli.csproj -c Release -f net8.0-windows10.0.19041.0 -r win-x64 --self-contained true
 ```
 
-## 3) Create installer
+GUI:
 
-Recommended options:
+```powershell
+dotnet publish src\WindowsDiamondFile.Gui\WindowsDiamondFile.Gui.csproj -c Release -f net8.0-windows10.0.19041.0 -r win-x64 --self-contained true
+```
 
-- **MSIX Packaging Tool** for Store-compatible package.
-- **Inno Setup** for classic installer with Windows 7 support.
-- **WiX Toolset** for enterprise MSI deployment.
+## 3) Installer options
+
+- **Inno Setup** for classic EXE installer (supports Windows 7 via net48 target).
+- **WiX Toolset** for enterprise MSI.
+- **MSIX Packaging Tool** for modern Windows Store pathway.
 
 ## 4) Microsoft Store path
 
@@ -33,13 +40,26 @@ Recommended options:
 3. Validate with Windows App Certification Kit.
 4. Submit via Partner Center.
 
-## 5) Security and reliability checklist
+## 5) Operational defaults for production
+
+- Prefer `DuplicateHandling=SkipOnlyWhenContentMatches`.
+- Keep `ContinueOnAccessDenied=true`.
+- Keep `VerifyCopiedFiles=true`.
+- Start with `DryRun=true` for first large migration.
+- Use GUI for operations teams and CLI for scheduled automation.
+
+## 6) CLI first-run behavior
+
+- If profile JSON does not exist, CLI creates a starter profile.
+- If provided path contains placeholder text (for example `path\to\your-backup-profile.json`), CLI exits with a friendly error.
+
+## 7) Security and reliability checklist
 
 - Code sign EXE/MSIX.
 - Enable Windows Defender reputation bootstrap.
+- Keep executable quarantine enabled.
 - Run copy verification enabled in profile.
 - Use dry-run on large migrations first.
-- Keep quarantine enabled for executable files.
 - Use `DuplicateHandling=SkipOnlyWhenContentMatches` for safest deduplication.
 - Keep `ContinueOnAccessDenied=true` to avoid job failure on protected paths.
-- Validate automation using process exit code (`0` success, `2` partial failures).
+- Validate automation via exit codes (`0` success, `2` partial failures, `1` fatal).

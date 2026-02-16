@@ -1,18 +1,22 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Security.Cryptography;
 
 namespace WindowsDiamondFile.Core;
 
+public sealed record EngineProgress(string Phase, int ScannedFiles, int CopiedFiles, int SkippedDuplicates, int FailedFiles, string Message);
+
 public sealed class BackupEngine
 {
-    public async Task<BackupReport> RunAsync(BackupProfile profile, CancellationToken cancellationToken = default)
+    public async Task<BackupReport> RunAsync(BackupProfile profile, IProgress<EngineProgress>? progress = null, CancellationToken cancellationToken = default)
     {
         ValidateProfile(profile);
 
         Directory.CreateDirectory(profile.OutputRoot);
         var report = new BackupReport();
 
+        progress?.Report(new EngineProgress("Initialize", 0, 0, 0, 0, "Starting scan"));
         var records = IndexFiles(profile, report, cancellationToken);
+        progress?.Report(new EngineProgress("Index", report.ScannedFiles, 0, 0, 0, $"Indexed {report.ScannedFiles} files"));
         var knownDestinations = BuildDestinationDuplicateIndex(profile);
 
         var operations = new List<CopyOperation>(records.Count);
@@ -22,7 +26,8 @@ public sealed class BackupEngine
             operations.Add(BuildCopyOperation(profile, record, knownDestinations));
         }
 
-        await CopyFilesAsync(profile, operations, report, cancellationToken).ConfigureAwait(false);
+        await CopyFilesAsync(profile, operations, report, progress, cancellationToken).ConfigureAwait(false);
+        progress?.Report(new EngineProgress("Complete", report.ScannedFiles, report.CopiedFiles, report.SkippedDuplicates, report.FailedFiles, "Backup complete"));
         return report;
     }
 
@@ -215,6 +220,7 @@ public sealed class BackupEngine
         BackupProfile profile,
         List<CopyOperation> operations,
         BackupReport report,
+        IProgress<EngineProgress>? progress,
         CancellationToken cancellationToken)
     {
         using var semaphore = new SemaphoreSlim(Math.Max(1, profile.MaxParallelCopies));
@@ -225,6 +231,7 @@ public sealed class BackupEngine
             try
             {
                 await CopyOperationWithPolicyAsync(profile, operation, report, cancellationToken).ConfigureAwait(false);
+                progress?.Report(new EngineProgress("Copy", report.ScannedFiles, report.CopiedFiles, report.SkippedDuplicates, report.FailedFiles, Path.GetFileName(operation.Record.SourcePath)));
             }
             catch (Exception ex)
             {
@@ -361,8 +368,8 @@ public sealed class BackupEngine
         const int bufferSize = 1024 * 1024;
         const FileOptions options = FileOptions.SequentialScan;
 
-        await using (var sourceStream = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, options))
-        await using (var destinationStream = new FileStream(destination, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize, options))
+        using (var sourceStream = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, options))
+        using (var destinationStream = new FileStream(destination, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize, options))
         {
             await sourceStream.CopyToAsync(destinationStream, bufferSize, cancellationToken).ConfigureAwait(false);
         }
@@ -396,8 +403,20 @@ public sealed class BackupEngine
 
     private static async Task<byte[]> ComputeSha256Async(string file, CancellationToken cancellationToken)
     {
-        await using var stream = File.OpenRead(file);
+        const int bufferSize = 1024 * 64;
+        var buffer = new byte[bufferSize];
+
+        using var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, FileOptions.SequentialScan);
         using var sha = SHA256.Create();
-        return await sha.ComputeHashAsync(stream, cancellationToken).ConfigureAwait(false);
+
+        var bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false);
+        while (bytesRead > 0)
+        {
+            sha.TransformBlock(buffer, 0, bytesRead, null, 0);
+            bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false);
+        }
+
+        sha.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
+        return sha.Hash ?? Array.Empty<byte>();
     }
 }
