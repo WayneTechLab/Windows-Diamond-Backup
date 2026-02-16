@@ -6,6 +6,14 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>WindowsDiamondFile.Core</AssemblyName>
     <RootNamespace>WindowsDiamondFile.Core</RootNamespace>
+    
+    <!-- Production metadata -->
+    <Version>1.0.0</Version>
+    <Authors>WayneTechLab</Authors>
+    <Company>WayneTechLab</Company>
+    <Product>Windows Diamond File</Product>
+    <Description>Professional multi-drive backup and file indexing library for Windows</Description>
+    <Copyright>Copyright (c) 2026 WayneTechLab</Copyright>
   </PropertyGroup>
 
   <ItemGroup>

@@ -9,6 +9,15 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>WindowsDiamondFile.Gui</AssemblyName>
     <RootNamespace>WindowsDiamondFile.Gui</RootNamespace>
+    
+    <!-- Production metadata -->
+    <Version>1.0.0</Version>
+    <Authors>WayneTechLab</Authors>
+    <Company>WayneTechLab</Company>
+    <Product>Windows Diamond File GUI</Product>
+    <Description>WPF graphical interface for Windows Diamond File backup tool</Description>
+    <Copyright>Copyright (c) 2026 WayneTechLab</Copyright>
+    <ApplicationIcon Condition="Exists('app.ico')">app.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
